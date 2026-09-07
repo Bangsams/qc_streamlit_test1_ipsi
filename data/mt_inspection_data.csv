@@ -1,0 +1,81 @@
+tanggal,batch_id,operator_mt,jenis_magnetisasi,arus_magnetisasi_A,arah_medan,jenis_partikel,lifting_power_kg,indikasi_ditemukan,panjang_indikasi_mm,mt_hasil,tanggal_kalibrasi_mt
+2026-07-01,B001,MT-01,Prod,105.8,Circular,Wet Visible,5.09,Tidak Ada,0.0,Accept,2026-07-24
+2026-07-02,B002,MT-02,Yoke DC,97.8,Longitudinal,Dry,5.62,Tidak Ada,0.0,Accept,2026-06-28
+2026-07-03,B003,MT-02,Yoke AC,90.5,Longitudinal,Wet Visible,5.29,Tidak Ada,0.0,Accept,2026-07-30
+2026-07-04,B004,MT-03,Prod,114.1,Longitudinal,Wet Fluorescent,4.9,Tidak Ada,0.0,Accept,2026-07-28
+2026-07-05,B005,MT-02,Prod,122.8,Longitudinal,Wet Fluorescent,5.6,Tidak Ada,0.0,Accept,2026-07-07
+2026-07-06,B006,MT-02,Yoke DC,113.1,Circular,Wet Fluorescent,5.7,Tidak Ada,0.0,Accept,2026-06-27
+2026-07-07,B007,MT-02,Yoke DC,119.2,Longitudinal,Wet Fluorescent,5.02,Tidak Ada,0.0,Accept,2026-06-12
+2026-07-08,B008,MT-01,Yoke AC,131.7,Longitudinal,Wet Visible,5.56,Tidak Ada,0.0,Accept,2026-06-12
+2026-07-09,B009,MT-01,Yoke DC,114.8,Longitudinal,Wet Fluorescent,5.36,Tidak Ada,0.0,Accept,2026-06-01
+2026-07-10,B010,MT-03,Yoke AC,117.1,Circular,Dry,5.52,Tidak Ada,0.0,Accept,2026-06-29
+2026-07-11,B011,MT-01,Yoke DC,115.1,Longitudinal,Wet Visible,5.49,Tidak Ada,0.0,Accept,2026-07-06
+2026-07-12,B012,MT-03,Prod,101.4,Circular,Wet Fluorescent,5.78,Tidak Ada,0.0,Accept,2026-06-06
+2026-07-13,B013,MT-02,Yoke DC,99.7,Circular,Wet Visible,5.26,Tidak Ada,0.0,Accept,2026-07-04
+2026-07-14,B014,MT-02,Yoke DC,115.8,Circular,Wet Fluorescent,4.7,Tidak Ada,0.0,Accept,2026-07-12
+2026-07-15,B015,MT-03,Yoke AC,122.0,Longitudinal,Wet Fluorescent,3.81,Tidak Ada,0.0,Accept,2026-06-09
+2026-07-16,B016,MT-03,Yoke AC,89.5,Circular,Wet Visible,5.44,Tidak Ada,0.0,Accept,2026-07-15
+2026-07-17,B017,MT-03,Prod,93.8,Circular,Dry,6.13,Tidak Ada,0.0,Accept,2026-07-18
+2026-07-18,B018,MT-01,Yoke AC,80.9,Circular,Wet Visible,5.8,Tidak Ada,0.0,Accept,2026-07-06
+2026-07-19,B019,MT-02,Yoke AC,135.1,Longitudinal,Wet Fluorescent,5.56,Tidak Ada,0.0,Accept,2026-07-06
+2026-07-20,B020,MT-01,Yoke AC,90.5,Circular,Wet Fluorescent,4.91,Tidak Ada,0.0,Accept,2026-06-28
+2026-07-21,B021,MT-03,Yoke AC,112.1,Circular,Wet Fluorescent,4.96,Tidak Ada,0.0,Accept,2026-07-25
+2026-07-22,B022,MT-01,Yoke AC,114.5,Circular,Wet Visible,4.7,Linear,3.3,Accept,2026-07-16
+2026-07-23,B023,MT-02,Yoke DC,97.6,Longitudinal,Wet Visible,4.76,Tidak Ada,0.0,Accept,2026-07-25
+2026-07-24,B024,MT-03,Yoke DC,102.7,Circular,Dry,4.84,Tidak Ada,0.0,Accept,2026-07-22
+2026-07-25,B025,MT-03,Prod,123.3,Circular,Dry,3.99,Tidak Ada,0.0,Accept,2026-06-21
+2026-07-26,B026,MT-02,Yoke AC,111.5,Longitudinal,Wet Visible,5.55,Tidak Ada,0.0,Accept,2026-06-04
+2026-07-27,B027,MT-01,Prod,99.5,Longitudinal,Wet Fluorescent,5.42,Tidak Ada,0.0,Accept,2026-06-12
+2026-07-28,B028,MT-01,Yoke AC,107.5,Circular,Wet Fluorescent,4.79,Tidak Ada,0.0,Accept,2026-07-12
+2026-07-29,B029,MT-01,Yoke AC,75.7,Circular,Wet Visible,5.71,Tidak Ada,0.0,Accept,2026-07-18
+2026-07-30,B030,MT-02,Yoke AC,127.3,Circular,Wet Visible,5.08,Tidak Ada,0.0,Accept,2026-06-09
+2026-07-31,B031,MT-03,Yoke DC,94.5,Circular,Dry,6.08,Tidak Ada,0.0,Accept,2026-07-03
+2026-08-01,B032,MT-03,Yoke DC,98.0,Circular,Wet Visible,4.88,Tidak Ada,0.0,Accept,2026-06-10
+2026-08-02,B033,MT-02,Yoke AC,86.6,Longitudinal,Wet Visible,5.05,Rounded,9.0,Reject,2026-07-30
+2026-08-03,B034,MT-03,Yoke DC,108.8,Longitudinal,Dry,5.64,Tidak Ada,0.0,Accept,2026-07-03
+2026-08-04,B035,MT-02,Yoke AC,101.5,Circular,Wet Fluorescent,5.85,Tidak Ada,0.0,Accept,2026-07-28
+2026-08-05,B036,MT-02,Yoke DC,129.2,Circular,Wet Visible,4.98,Tidak Ada,0.0,Accept,2026-07-25
+2026-08-06,B037,MT-02,Prod,103.6,Circular,Wet Visible,5.62,Tidak Ada,0.0,Accept,2026-07-25
+2026-08-07,B038,MT-01,Yoke DC,98.1,Circular,Wet Visible,5.88,Linear,2.3,Accept,2026-07-20
+2026-08-08,B039,MT-01,Prod,113.6,Longitudinal,Dry,5.3,Tidak Ada,0.0,Accept,2026-07-01
+2026-08-09,B040,MT-02,Prod,127.6,Longitudinal,Dry,4.74,Tidak Ada,0.0,Accept,2026-07-30
+2026-08-10,B041,MT-02,Yoke DC,114.2,Circular,Wet Visible,4.9,Tidak Ada,0.0,Accept,2026-06-02
+2026-08-11,B042,MT-02,Yoke DC,105.6,Longitudinal,Wet Fluorescent,5.37,Tidak Ada,0.0,Accept,2026-07-20
+2026-08-12,B043,MT-02,Yoke DC,129.6,Longitudinal,Wet Visible,5.12,Tidak Ada,0.0,Accept,2026-06-22
+2026-08-13,B044,MT-01,Prod,118.2,Circular,Wet Visible,5.62,Tidak Ada,0.0,Accept,2026-06-07
+2026-08-14,B045,MT-02,Yoke AC,105.2,Longitudinal,Dry,6.01,Tidak Ada,0.0,Accept,2026-07-10
+2026-08-15,B046,MT-03,Prod,114.5,Circular,Wet Fluorescent,4.96,Tidak Ada,0.0,Accept,2026-06-19
+2026-08-16,B047,MT-03,Yoke DC,101.1,Longitudinal,Dry,5.09,Tidak Ada,0.0,Accept,2026-07-22
+2026-08-17,B048,MT-03,Yoke AC,112.7,Longitudinal,Wet Fluorescent,5.46,Linear,4.4,Reject,2026-07-23
+2026-08-18,B049,MT-03,Prod,115.2,Circular,Wet Visible,5.63,Tidak Ada,0.0,Accept,2026-06-01
+2026-08-19,B050,MT-02,Prod,126.5,Circular,Dry,5.27,Tidak Ada,0.0,Accept,2026-06-23
+2026-08-20,B051,MT-03,Yoke DC,116.3,Longitudinal,Dry,5.09,Tidak Ada,0.0,Accept,2026-07-22
+2026-08-21,B052,MT-03,Yoke DC,102.1,Circular,Wet Visible,5.64,Tidak Ada,0.0,Accept,2026-06-17
+2026-08-22,B053,MT-01,Yoke AC,106.7,Circular,Dry,5.14,Tidak Ada,0.0,Accept,2026-06-03
+2026-08-23,B054,MT-03,Prod,135.7,Longitudinal,Wet Fluorescent,5.68,Linear,4.4,Reject,2026-07-24
+2026-08-24,B055,MT-02,Yoke DC,84.6,Longitudinal,Dry,4.92,Tidak Ada,0.0,Accept,2026-06-17
+2026-08-25,B056,MT-01,Yoke AC,99.3,Longitudinal,Wet Fluorescent,4.8,Tidak Ada,0.0,Accept,2026-06-30
+2026-08-26,B057,MT-03,Yoke DC,125.0,Circular,Wet Visible,5.29,Linear,8.6,Reject,2026-07-02
+2026-08-27,B058,MT-01,Prod,113.5,Circular,Wet Fluorescent,5.64,Tidak Ada,0.0,Accept,2026-06-27
+2026-08-28,B059,MT-02,Yoke AC,86.0,Longitudinal,Wet Visible,5.24,Tidak Ada,0.0,Accept,2026-06-07
+2026-08-29,B060,MT-03,Yoke DC,83.8,Circular,Wet Visible,5.1,Tidak Ada,0.0,Accept,2026-07-30
+2026-08-30,B061,MT-03,Yoke DC,76.9,Longitudinal,Wet Fluorescent,4.98,Tidak Ada,0.0,Accept,2026-06-03
+2026-08-31,B062,MT-01,Yoke AC,108.8,Longitudinal,Wet Fluorescent,4.5,Tidak Ada,0.0,Accept,2026-07-07
+2026-09-01,B063,MT-03,Yoke AC,114.3,Longitudinal,Wet Fluorescent,5.35,Rounded,2.4,Accept,2026-06-18
+2026-09-02,B064,MT-01,Yoke AC,108.3,Longitudinal,Wet Fluorescent,4.95,Tidak Ada,0.0,Accept,2026-06-17
+2026-09-03,B065,MT-01,Prod,77.6,Circular,Dry,5.25,Tidak Ada,0.0,Accept,2026-07-23
+2026-09-04,B066,MT-01,Yoke AC,99.4,Longitudinal,Wet Fluorescent,5.94,Tidak Ada,0.0,Accept,2026-07-23
+2026-09-05,B067,MT-03,Yoke AC,112.2,Longitudinal,Wet Visible,4.96,Tidak Ada,0.0,Accept,2026-06-16
+2026-09-06,B068,MT-01,Prod,118.9,Longitudinal,Wet Fluorescent,5.74,Tidak Ada,0.0,Accept,2026-07-10
+2026-09-07,B069,MT-03,Yoke AC,100.2,Longitudinal,Wet Visible,5.09,Tidak Ada,0.0,Accept,2026-07-27
+2026-09-08,B070,MT-02,Yoke AC,110.3,Longitudinal,Dry,5.15,Tidak Ada,0.0,Accept,2026-07-09
+2026-09-09,B071,MT-02,Prod,115.4,Circular,Wet Visible,4.89,Tidak Ada,0.0,Accept,2026-07-25
+2026-09-10,B072,MT-01,Prod,106.9,Longitudinal,Dry,5.18,Tidak Ada,0.0,Accept,2026-06-18
+2026-09-11,B073,MT-02,Yoke AC,87.7,Circular,Dry,5.11,Linear,8.5,Reject,2026-07-20
+2026-09-12,B074,MT-02,Yoke DC,123.8,Circular,Wet Visible,4.6,Tidak Ada,0.0,Accept,2026-06-19
+2026-09-13,B075,MT-03,Prod,89.3,Circular,Wet Visible,6.3,Tidak Ada,0.0,Accept,2026-07-16
+2026-09-14,B076,MT-02,Yoke AC,104.8,Longitudinal,Wet Fluorescent,5.16,Tidak Ada,0.0,Accept,2026-07-02
+2026-09-15,B077,MT-02,Prod,103.5,Longitudinal,Dry,4.72,Tidak Ada,0.0,Accept,2026-06-02
+2026-09-16,B078,MT-01,Yoke DC,97.9,Circular,Wet Visible,4.36,Tidak Ada,0.0,Accept,2026-07-11
+2026-09-17,B079,MT-03,Prod,116.4,Longitudinal,Wet Fluorescent,4.8,Tidak Ada,0.0,Accept,2026-06-30
+2026-09-18,B080,MT-03,Yoke AC,104.6,Longitudinal,Wet Fluorescent,4.65,Tidak Ada,0.0,Accept,2026-06-02

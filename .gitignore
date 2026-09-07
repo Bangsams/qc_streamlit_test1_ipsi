@@ -1,0 +1,10 @@
+# Jangan commit file rahasia / hasil generate
+.env
+data/hasil_qc_log.xlsx
+data/photos/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+
