@@ -9,6 +9,7 @@ import sys, os
 from datetime import date
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.theme import inject_background
 from utils.data_handler import (
     save_weld_process_record, load_weld_process_data,
     save_ut_record, load_ut_data,
@@ -17,6 +18,7 @@ from utils.data_handler import (
 )
 
 st.set_page_config(page_title="Input Data - QC App", page_icon="📥", layout="wide")
+inject_background()
 st.title("📥 Input Data QC")
 st.caption("Catat parameter dari display digital mesin las & alat NDT (UT/MT) ke form ini")
 

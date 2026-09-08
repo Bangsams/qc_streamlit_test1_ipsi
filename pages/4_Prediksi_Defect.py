@@ -14,9 +14,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, confusion_matrix
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.theme import inject_background
 from utils.data_handler import load_combined_data
 
 st.set_page_config(page_title="Prediksi Defect - QC App", page_icon="🤖", layout="wide")
+inject_background()
 st.title("🤖 Prediksi Risiko Reject (UT + MT)")
 st.caption("Model Random Forest: parameter proses las → prediksi hasil gabungan Ultrasonic Testing (UT) & Magnetic Particle Testing (MT)")
 

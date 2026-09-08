@@ -7,10 +7,12 @@ import pandas as pd
 import sys, os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.theme import inject_background
 from utils.data_handler import load_combined_data
 from utils.qc_utils import calculate_dpmo, classify_sigma_level, SIGMA_BENCHMARK
 
 st.set_page_config(page_title="DMAIC & Six Sigma - QC App", page_icon="🎯", layout="wide")
+inject_background()
 st.title("🎯 Six Sigma DMAIC")
 st.caption("Berbasis data gabungan hasil Ultrasonic Testing (UT) dan Magnetic Particle Testing (MT)")
 

@@ -11,10 +11,12 @@ import plotly.graph_objects as go
 import sys, os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.theme import inject_background
 from utils.data_handler import load_ut_data, load_mt_data
 from utils.qc_utils import xbar_s_chart, p_chart, process_capability
 
 st.set_page_config(page_title="SPC Analysis - QC App", page_icon="📊", layout="wide")
+inject_background()
 st.title("📊 Statistical Process Control (SPC)")
 st.caption("Berbasis data digital dari alat UT (Ultrasonic Testing) & MT (Magnetic Particle Testing)")
 

@@ -19,12 +19,14 @@ import sys, os
 from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.theme import inject_background
 from utils.data_handler import save_qc_report, save_photo_locally, load_qc_report_log
 from utils.qc_utils import check_mt_lifting_power, MT_MIN_LIFTING_POWER_KG
 from utils.config import get_config, set_config, is_sheets_configured, is_drive_bridge_configured
 from utils import sheets_handler
 
 st.set_page_config(page_title="Laporan Foto QC - QC App", page_icon="📸", layout="wide")
+inject_background()
 st.title("📸 Laporan Hasil QC — Foto Otomatis Tercatat di Google Sheets")
 st.caption("Satu kali foto & isi form di sini, foto + data otomatis tersimpan dan tampil langsung di Google Sheets")
 
