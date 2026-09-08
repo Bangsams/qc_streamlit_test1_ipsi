@@ -1,7 +1,9 @@
 """
 theme.py
-Background watermark logo IHI Power Services untuk seluruh halaman aplikasi,
-DIRANCANG SUPAYA AMAN DI LIGHT MODE MAUPUN DARK MODE STREAMLIT:
+Background watermark logo IHI Power Services + aksen warna orange/gold khas
+IHI (mendekati warna resmi SDG 12 "Responsible Consumption & Production",
+#BF8B2E) untuk seluruh halaman aplikasi, DIRANCANG SUPAYA AMAN DI LIGHT MODE
+MAUPUN DARK MODE STREAMLIT:
 
   * Logo ditaruh sebagai elemen overlay TERPISAH (::before), BUKAN
     mengubah opacity container utama — supaya TIDAK ikut memudarkan teks
@@ -15,6 +17,11 @@ DIRANCANG SUPAYA AMAN DI LIGHT MODE MAUPUN DARK MODE STREAMLIT:
   * z-index diatur supaya logo SELALU di lapisan paling belakang (di
     belakang semua teks/komponen), tidak pernah menutupi/tumpang tindih
     konten yang bisa mengganggu keterbacaan.
+  * Aksen orange (border/garis bawah heading, divider) HANYA menyentuh
+    elemen dekoratif (border, background tombol), TIDAK PERNAH warna teks
+    utama/body — warna teks tetap ikut variabel tema bawaan Streamlit
+    (var(--text-color)) supaya kontrasnya selalu terjamin di light & dark
+    mode (dijaga otomatis oleh Streamlit sendiri, bukan di-hardcode di sini).
 
 Cara pakai (WAJIB dipanggil di baris paling atas SETIAP halaman/page,
 karena Streamlit multi-page app menjalankan tiap file secara independen):
@@ -23,9 +30,20 @@ karena Streamlit multi-page app menjalankan tiap file secara independen):
     from utils.theme import inject_background
     st.set_page_config(...)
     inject_background()
+
+CATATAN: warna aksen utama (tombol, slider, checkbox, dst) sudah diatur
+lewat `.streamlit/config.toml` ([theme] primaryColor = "#BF8B2E") — itu
+otomatis berlaku ke seluruh widget bawaan Streamlit tanpa perlu CSS
+tambahan. File ini HANYA menambah aksen orange untuk elemen yang TIDAK
+dijangkau oleh primaryColor Streamlit (heading, divider, watermark logo).
 """
 
 import streamlit as st
+
+# Warna aksen orange/gold khas IHI, senada dengan warna resmi SDG 12
+# "Responsible Consumption & Production" (#BF8B2E) — dipilih supaya
+# konsisten dengan primaryColor di .streamlit/config.toml.
+IHI_ACCENT_COLOR = "#BF8B2E"
 
 # Logo IHI (background putih sudah dibuang -> transparan) dengan alpha
 # sudah diturunkan jadi watermark halus, di-encode base64 supaya tidak
@@ -78,6 +96,40 @@ _CSS = f"""
     [data-testid="stAppViewContainer"] > .main::before {{
         opacity: 0.08;
     }}
+}}
+
+/* ===================================================================
+   Aksen warna orange/gold IHI (senada SDG 12, #BF8B2E) untuk elemen
+   dekoratif — TIDAK menyentuh warna teks/body, jadi kontras tetap aman
+   otomatis di light maupun dark mode (warna teks ikut var(--text-color)
+   bawaan Streamlit, bukan di-hardcode di sini).
+   =================================================================== */
+
+/* Garis bawah tipis di heading (h1/h2/h3) sebagai aksen brand */
+[data-testid="stAppViewContainer"] h1,
+[data-testid="stAppViewContainer"] h2,
+[data-testid="stAppViewContainer"] h3 {{
+    border-bottom: 3px solid {IHI_ACCENT_COLOR};
+    padding-bottom: 0.25rem;
+}}
+
+/* Divider (st.divider() / ---) pakai warna aksen, bukan abu-abu default */
+[data-testid="stAppViewContainer"] hr {{
+    border-top: 2px solid {IHI_ACCENT_COLOR};
+    opacity: 0.6;
+}}
+
+/* Garis aksen tipis di tepi atas sidebar */
+[data-testid="stSidebar"] {{
+    border-top: 4px solid {IHI_ACCENT_COLOR};
+}}
+
+/* Tab aktif pakai warna aksen (default Streamlit biasanya merah) */
+[data-testid="stAppViewContainer"] [data-baseweb="tab-highlight"] {{
+    background-color: {IHI_ACCENT_COLOR} !important;
+}}
+[data-testid="stAppViewContainer"] button[aria-selected="true"] {{
+    color: {IHI_ACCENT_COLOR} !important;
 }}
 </style>
 """

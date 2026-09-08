@@ -1,0 +1,8 @@
+# Konfigurasi tema Streamlit — hanya override warna aksen (primaryColor)
+# supaya tombol, slider, checkbox, progress bar, dsb pakai warna orange/gold
+# khas logo IHI (mendekati warna resmi SDG 12 "Responsible Consumption &
+# Production" #BF8B2E). base/backgroundColor SENGAJA tidak di-set supaya
+# mode terang/gelap otomatis (mengikuti perangkat / pilihan user di menu
+# Settings Streamlit) tetap berfungsi normal seperti sebelumnya.
+[theme]
+primaryColor = "#BF8B2E"
