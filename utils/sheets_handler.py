@@ -73,7 +73,7 @@ from .config import get_config, get_service_account_info
 SHEET_TAB_NAME = "hasil_qc_log"
 QC_REPORT_COLUMNS = [
     "tanggal", "waktu", "nomor_seri_barang", "jenis_ndt", "wilayah_pemeriksaan_face",
-    "posisi_x_line_mm", "hasil", "perlu_gerinda", "operator_qc", "catatan", "foto",
+    "posisi_x_line_mm", "hasil", "perlu_gerinda", "operator_qc", "catatan", "foto", "link_foto",
 ]
 
 # Ukuran seragam untuk foto yang ditampilkan di dalam cell Google Sheets (piksel)
@@ -300,7 +300,12 @@ def _upload_photo_via_apps_script(image_bytes: bytes, filename: str):
     ini jalur upload UTAMA supaya tidak kena error 'Service Accounts do not
     have storage quota'.
 
-    Mengembalikan (url, error) sama seperti upload_photo_to_drive()."""
+    Mengembalikan (embed_url, view_url, error):
+      - embed_url: link endpoint "thumbnail" Google (stabil untuk ditanam di
+        formula IMAGE() Sheets — beda dari "uc?export=view" yang sering
+        diblokir Google untuk hotlink eksternal, penyebab foto tidak tampil).
+      - view_url: link biasa untuk DIBUKA LANGSUNG (klik) di tab baru.
+    """
     import base64
 
     cfg = get_config()
@@ -319,7 +324,7 @@ def _upload_photo_via_apps_script(image_bytes: bytes, filename: str):
     try:
         resp = requests.post(script_url, json=payload, timeout=60)
     except requests.exceptions.RequestException as e:
-        return None, f"Gagal menghubungi Apps Script Web App: {e}"
+        return None, None, f"Gagal menghubungi Apps Script Web App: {e}"
 
     # Apps Script kadang mengembalikan halaman HTML (redirect otorisasi dsb)
     # kalau URL/deployment-nya salah -> deteksi supaya errornya jelas.
@@ -327,19 +332,25 @@ def _upload_photo_via_apps_script(image_bytes: bytes, filename: str):
         data = resp.json()
     except ValueError:
         snippet = resp.text[:200].replace("\n", " ")
-        return None, (
+        return None, None, (
             f"Respons dari Apps Script bukan JSON (HTTP {resp.status_code}). "
             f"Kemungkinan URL Web App salah, deployment belum 'Anyone' akses, "
             f"atau belum di-deploy ulang setelah edit kode. Cuplikan respons: {snippet}"
         )
 
     if not data.get("success"):
-        return None, data.get("error", "Apps Script mengembalikan error tanpa keterangan.")
+        return None, None, data.get("error", "Apps Script mengembalikan error tanpa keterangan.")
+
+    # embedUrl/viewUrl = field baru (Code.gs versi terbaru). Fallback ke
+    # field lama "url" kalau Apps Script belum di-redeploy ke versi baru
+    # (supaya tetap jalan, walau embed-nya bisa saja masih kena blokir Google).
+    embed_url = data.get("embedUrl") or data.get("url")
+    view_url = data.get("viewUrl") or data.get("url")
 
     if data.get("warning"):
-        return data.get("url"), data.get("warning")
+        return embed_url, view_url, data.get("warning")
 
-    return data.get("url"), None
+    return embed_url, view_url, None
 
 
 def upload_photo_to_drive(image_bytes: bytes, filename: str):
@@ -358,8 +369,13 @@ def upload_photo_to_drive(image_bytes: bytes, filename: str):
          account jadi member — lihat dokumentasi
          https://developers.google.com/workspace/drive/api/guides/about-shareddrives).
 
-    Mengembalikan (url: str atau None, error: str atau None) — kalau gagal,
-    'error' berisi pesan asli supaya penyebabnya jelas (bukan disembunyikan)."""
+    Mengembalikan (embed_url, view_url, error):
+      - embed_url: link endpoint "thumbnail" Google, dipakai untuk formula
+        IMAGE() di Sheets (stabil untuk hotlink, beda dari "uc?export=view"
+        yang sering diblokir Google -> penyebab foto tidak tampil/error).
+      - view_url: link untuk DIBUKA LANGSUNG (klik) di tab baru, lihat foto
+        resolusi penuh di Drive.
+      - error diisi kalau gagal, supaya penyebabnya jelas (bukan disembunyikan)."""
     cfg = get_config()
 
     # --- Jalur 1: Apps Script bridge (direkomendasikan) ---
@@ -369,7 +385,7 @@ def upload_photo_to_drive(image_bytes: bytes, filename: str):
     # --- Jalur 2: fallback ke Service Account + Drive API langsung ---
     service = _get_drive_service()
     if service is None:
-        return None, (
+        return None, None, (
             "Belum ada jalur upload Drive yang terkonfigurasi. Isi "
             "GOOGLE_APPS_SCRIPT_URL + GOOGLE_APPS_SCRIPT_SECRET di panel "
             "Pengaturan (rekomendasi, lihat apps_script/Code.gs), ATAU pakai "
@@ -397,11 +413,11 @@ def upload_photo_to_drive(image_bytes: bytes, filename: str):
                 hint = (" -> Gunakan jembatan Google Apps Script (isi "
                         "GOOGLE_APPS_SCRIPT_URL & GOOGLE_APPS_SCRIPT_SECRET di "
                         "Pengaturan) supaya tidak kena batas kuota Service Account.")
-            return None, f"Gagal upload ke Drive (HTTP {e.resp.status}): {reason}{hint}"
+            return None, None, f"Gagal upload ke Drive (HTTP {e.resp.status}): {reason}{hint}"
 
         file_id = uploaded.get("id")
         if not file_id:
-            return None, f"Upload sukses tapi tidak ada file id di respons: {uploaded}"
+            return None, None, f"Upload sukses tapi tidak ada file id di respons: {uploaded}"
 
         # Beri akses publik "anyone with the link" khusus untuk file foto ini
         # (bukan seluruh Drive), supaya Google Sheets bisa memuat gambarnya
@@ -411,19 +427,22 @@ def upload_photo_to_drive(image_bytes: bytes, filename: str):
                 fileId=file_id, body={"role": "reader", "type": "anyone"}, supportsAllDrives=True
             ).execute()
         except HttpError as e:
-            return None, f"Foto terupload tapi gagal diset publik (HTTP {e.resp.status}): {e._get_reason()}"
+            return None, None, f"Foto terupload tapi gagal diset publik (HTTP {e.resp.status}): {e._get_reason()}"
 
-        return f"https://drive.google.com/uc?export=view&id={file_id}", None
+        embed_url = f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
+        view_url = f"https://drive.google.com/file/d/{file_id}/view"
+        return embed_url, view_url, None
     except Exception as e:
-        return None, f"Gagal upload ke Google Drive: {e}"
+        return None, None, f"Gagal upload ke Google Drive: {e}"
 
 
 def append_qc_report(record: dict, image_bytes: bytes = None) -> tuple:
     """Tambahkan satu baris hasil QC ke Google Sheets. Kalau image_bytes
     diberikan, foto diupload dulu ke Google Drive lalu ditampilkan langsung
-    sebagai gambar seragam di kolom 'foto' pakai formula IMAGE().
+    sebagai gambar seragam di kolom 'foto' (formula IMAGE()) DAN link klik
+    langsung untuk buka foto resolusi penuh di kolom 'link_foto'.
 
-    Mengembalikan (sukses: bool, foto_url: str atau None, error: str atau None).
+    Mengembalikan (sukses: bool, foto_view_url: str atau None, error: str atau None).
     'error' diisi kalau ada bagian yang gagal (mis. upload foto gagal, atau
     Sheets sendiri gagal diakses), supaya penyebabnya terlihat jelas di UI,
     bukan disembunyikan."""
@@ -431,23 +450,28 @@ def append_qc_report(record: dict, image_bytes: bytes = None) -> tuple:
     if ws is None:
         return False, None, ws_error or "Google Sheets belum terhubung."
 
-    foto_url = None
+    embed_url = None
+    view_url = None
     foto_error = None
     foto_cell_value = ""
+    link_cell_value = ""
     if image_bytes:
         std_bytes = standardize_photo_for_sheets(image_bytes)
         filename = f"{record.get('nomor_seri_barang', 'foto')}_{uuid.uuid4().hex[:8]}.jpg"
-        foto_url, foto_error = upload_photo_to_drive(std_bytes, filename)
-        if foto_url:
-            foto_cell_value = f'=IMAGE("{foto_url}",4,{SHEET_IMAGE_HEIGHT},{SHEET_IMAGE_WIDTH})'
+        embed_url, view_url, foto_error = upload_photo_to_drive(std_bytes, filename)
+        if embed_url:
+            foto_cell_value = f'=IMAGE("{embed_url}",4,{SHEET_IMAGE_HEIGHT},{SHEET_IMAGE_WIDTH})'
+        if view_url:
+            link_cell_value = f'=HYPERLINK("{view_url}","Buka Foto")'
 
     try:
-        row = [record.get(col, "") for col in QC_REPORT_COLUMNS if col != "foto"]
+        row = [record.get(col, "") for col in QC_REPORT_COLUMNS if col not in ("foto", "link_foto")]
         row.append(foto_cell_value)
+        row.append(link_cell_value)
         ws.append_row(row, value_input_option="USER_ENTERED")
-        return True, foto_url, foto_error
+        return True, view_url, foto_error
     except Exception as e:
-        return False, foto_url, f"Gagal menulis baris ke Sheets: {_describe_gspread_error(e)}"
+        return False, view_url, f"Gagal menulis baris ke Sheets: {_describe_gspread_error(e)}"
 
 
 def test_drive_upload() -> tuple:
@@ -459,9 +483,9 @@ def test_drive_upload() -> tuple:
         img = Image.new("RGB", (100, 100), (0, 150, 0))
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=80)
-        url, error = upload_photo_to_drive(buf.getvalue(), f"tes_koneksi_{uuid.uuid4().hex[:6]}.jpg")
-        if url:
-            return True, f"Berhasil upload. URL: {url}"
+        embed_url, view_url, error = upload_photo_to_drive(buf.getvalue(), f"tes_koneksi_{uuid.uuid4().hex[:6]}.jpg")
+        if view_url:
+            return True, f"Berhasil upload.\nLink lihat foto: {view_url}\nLink embed (IMAGE()): {embed_url}"
         return False, error or "Gagal upload tanpa keterangan error."
     except Exception as e:
         return False, f"Gagal menjalankan tes: {e}"

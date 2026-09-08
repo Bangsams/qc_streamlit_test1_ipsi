@@ -16,11 +16,10 @@ walau aplikasi dimatikan/redeploy. Untuk mengubahnya lagi, gunakan tombol
 
 import streamlit as st
 import sys, os
-from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.theme import inject_background
-from utils.data_handler import save_qc_report, save_photo_locally, load_qc_report_log
+from utils.data_handler import save_qc_report, save_photo_locally, load_qc_report_log, now_wib
 from utils.qc_utils import check_mt_lifting_power, MT_MIN_LIFTING_POWER_KG
 from utils.config import get_config, set_config, is_sheets_configured, is_drive_bridge_configured
 from utils import sheets_handler
@@ -199,7 +198,7 @@ with col_form:
         elif not nomor_seri or not operator_qc:
             st.error("Nomor Seri Barang dan Operator QC wajib diisi.")
         else:
-            now = datetime.now()
+            now = now_wib()  # WIB (Asia/Jakarta), bukan waktu server UTC
             image_bytes = foto.getvalue()
             foto_filename = save_photo_locally(image_bytes, nomor_seri)
 

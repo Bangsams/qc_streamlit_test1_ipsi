@@ -159,21 +159,30 @@ function doPost(e) {
     } catch (shareErr) {
       // File sudah terupload walau gagal set sharing -> tetap laporkan
       // sukses, tapi beri catatan di error supaya kelihatan di UI Python.
+      var fid = file.getId();
       return jsonResponse({
         success: true,
-        fileId: file.getId(),
-        url: "https://lh3.googleusercontent.com/d/" + file.getId(),
+        fileId: fid,
+        // "thumbnail" adalah endpoint resmi Google untuk hotlink gambar —
+        // JAUH lebih stabil dibanding "uc?export=view" (yang sering diblokir
+        // Google untuk embed eksternal, bikin IMAGE() gagal tampil / foto error).
+        embedUrl: "https://drive.google.com/thumbnail?id=" + fid + "&sz=w1000",
+        // "viewUrl" = link biasa untuk DIBUKA LANGSUNG (klik) di tab baru,
+        // beda dari embedUrl yang khusus untuk ditanam sebagai gambar.
+        viewUrl: "https://drive.google.com/file/d/" + fid + "/view",
         warning: "File terupload tapi gagal diset publik: " + shareErr.message
       });
     }
 
     var fileId = file.getId();
-    var url = "https://lh3.googleusercontent.com/d/" + fileId;
+    var embedUrl = "https://drive.google.com/thumbnail?id=" + fileId + "&sz=w1000";
+    var viewUrl = "https://drive.google.com/file/d/" + fileId + "/view";
 
     return jsonResponse({
       success: true,
       fileId: fileId,
-      url: url
+      embedUrl: embedUrl,
+      viewUrl: viewUrl
     });
 
   } catch (err) {
@@ -214,5 +223,5 @@ function testUploadManual() {
   var file = DriveApp.getRootFolder().createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   Logger.log("Sukses! File ID: " + file.getId());
-  Logger.log("URL: https://drive.google.com/uc?export=view&id=" + file.getId());
+  Logger.log("URL: https://drive.google.com/thumbnail?id=" + file.getId() + "&sz=w1000");
 }

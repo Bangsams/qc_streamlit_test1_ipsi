@@ -179,8 +179,21 @@ def save_photo_locally(image_bytes: bytes, nomor_seri: str, ext: str = "jpg") ->
 
 
 def datetime_str() -> str:
+    return now_wib().strftime("%Y%m%d_%H%M%S")
+
+
+def now_wib():
+    """Waktu saat ini di zona WIB (Asia/Jakarta), BUKAN waktu server.
+
+    PENTING: server Streamlit Cloud berjalan di zona UTC. Kalau pakai
+    `datetime.now()` polos, timestamp yang tercatat akan MELESET 7 JAM dari
+    waktu Indonesia (WIB = UTC+7) — itu penyebab kolom 'tanggal'/'waktu' di
+    laporan QC selama ini salah. Gunakan fungsi ini di semua tempat yang
+    mencatat waktu kejadian (laporan QC, nama file foto, dst), JANGAN pakai
+    `datetime.now()` langsung."""
     from datetime import datetime
-    return datetime.now().strftime("%Y%m%d_%H%M%S")
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo("Asia/Jakarta"))
 
 
 def save_qc_report_to_excel(record: dict):
