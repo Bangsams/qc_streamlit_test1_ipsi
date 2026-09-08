@@ -12,8 +12,10 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils.data_handler import load_weld_process_data, load_ut_data, load_mt_data, load_combined_data
 from utils.qc_utils import calculate_dpmo, classify_sigma_level
+from utils.theme import inject_background
 
 st.set_page_config(page_title="QC App - PT IHI Power Service", page_icon="🔧", layout="wide")
+inject_background()
 
 st.title("🔧 Aplikasi QC Digital — Deteksi & Analisis Defect")
 st.caption("Studi Kasus: PT IHI Power Service Indonesia — Fabrikasi Boiler & Pressure Part | "

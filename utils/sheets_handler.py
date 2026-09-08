@@ -63,14 +63,12 @@ Setup (SEKALI SAJA, lihat juga README.md):
 """
 
 import io
-import json
-import os
 import uuid
 
 import pandas as pd
 import requests
 
-from .config import get_config
+from .config import get_config, get_service_account_info
 
 SHEET_TAB_NAME = "hasil_qc_log"
 QC_REPORT_COLUMNS = [
@@ -90,25 +88,18 @@ _SCOPES = [
 
 def _get_credentials():
     """Mengembalikan (creds, error). error diisi kalau gagal, supaya
-    penyebab aslinya tidak disembunyikan (mis. JSON tidak valid, path file
-    tidak ada, dsb)."""
-    cfg = get_config()
-    sa_raw = cfg.get("GOOGLE_SERVICE_ACCOUNT_JSON")
-    if not sa_raw:
-        return None, "GOOGLE_SERVICE_ACCOUNT_JSON belum diisi di Pengaturan."
+    penyebab aslinya tidak disembunyikan (mis. JSON tidak valid, private_key
+    salah escape, dsb). Pengambilan & perbaikan otomatis kredensial (termasuk
+    fix backslash newline) ditangani terpusat di utils.config.get_service_account_info()."""
+    info, error = get_service_account_info()
+    if info is None:
+        return None, error
     try:
         from google.oauth2.service_account import Credentials
     except ImportError:
         return None, "Library 'google-auth' belum terpasang (pip install google-auth)."
     try:
-        # GOOGLE_SERVICE_ACCOUNT_JSON boleh berupa: isi JSON langsung, ATAU
-        # path ke file .json (memudahkan saat deploy dengan file secret).
-        if os.path.exists(sa_raw):
-            return Credentials.from_service_account_file(sa_raw, scopes=_SCOPES), None
-        info = json.loads(sa_raw)
         return Credentials.from_service_account_info(info, scopes=_SCOPES), None
-    except json.JSONDecodeError as e:
-        return None, f"Isi GOOGLE_SERVICE_ACCOUNT_JSON bukan JSON yang valid: {e}"
     except Exception as e:
         return None, f"Gagal membaca kredensial Service Account: {e}"
 
@@ -422,7 +413,7 @@ def upload_photo_to_drive(image_bytes: bytes, filename: str):
         except HttpError as e:
             return None, f"Foto terupload tapi gagal diset publik (HTTP {e.resp.status}): {e._get_reason()}"
 
-        return f"https://drive.google.com/file/d/{file_id}/view", None
+        return f"https://drive.google.com/uc?export=view&id={file_id}", None
     except Exception as e:
         return None, f"Gagal upload ke Google Drive: {e}"
 
@@ -448,7 +439,7 @@ def append_qc_report(record: dict, image_bytes: bytes = None) -> tuple:
         filename = f"{record.get('nomor_seri_barang', 'foto')}_{uuid.uuid4().hex[:8]}.jpg"
         foto_url, foto_error = upload_photo_to_drive(std_bytes, filename)
         if foto_url:
-            foto_cell_value = f'=HYPERLINK("{foto_url}","📷 Lihat Foto")'
+            foto_cell_value = f'=IMAGE("{foto_url}",4,{SHEET_IMAGE_HEIGHT},{SHEET_IMAGE_WIDTH})'
 
     try:
         row = [record.get(col, "") for col in QC_REPORT_COLUMNS if col != "foto"]
