@@ -73,7 +73,7 @@ from .config import get_config, get_service_account_info
 SHEET_TAB_NAME = "hasil_qc_log"
 QC_REPORT_COLUMNS = [
     "tanggal", "waktu", "nomor_seri_barang", "jenis_ndt", "wilayah_pemeriksaan_face",
-    "posisi_x_line_mm", "hasil", "perlu_gerinda", "operator_qc", "catatan", "foto", "link_foto",
+    "posisi_x_line_mm", "hasil", "perlu_gerinda", "operator_qc", "catatan", "foto",
 ]
 
 # Ukuran seragam untuk foto yang ditampilkan di dalam cell Google Sheets (piksel)
@@ -187,17 +187,28 @@ def _get_worksheet():
             return None, _describe_gspread_error(e)
 
 
+def _pad_header_for_update(old_header: list) -> list:
+    """Kalau skema kolom sekarang lebih PENDEK dari header lama di sheet
+    (mis. dulu ada 'link_foto', sekarang dihapus), tetap tulis sel kosong
+    ("") di posisi kolom lama itu supaya tidak jadi 'kolom hantu' dengan
+    judul basi yang tidak sesuai skema baru."""
+    new_header = list(QC_REPORT_COLUMNS)
+    if len(old_header) > len(new_header):
+        new_header += [""] * (len(old_header) - len(new_header))
+    return new_header
+
+
 def _sync_header(ws) -> str:
     """Pastikan baris header (baris 1) di sheet SELALU sesuai skema kolom
     terbaru (QC_REPORT_COLUMNS) — dipanggil otomatis tiap kali worksheet
     diakses, supaya sheet lama (dibuat versi aplikasi sebelumnya, dengan
-    nama kolom lama seperti 'foto_path'/'status_kirim_wa') otomatis
-    diperbarui strukturnya tanpa mengganggu baris data yang sudah ada.
-    Mengembalikan None kalau sukses/tidak perlu diubah, atau pesan error."""
+    nama kolom lama seperti 'foto_path'/'status_kirim_wa'/'link_foto')
+    otomatis diperbarui strukturnya tanpa mengganggu baris data yang sudah
+    ada. Mengembalikan None kalau sukses/tidak perlu diubah, atau pesan error."""
     try:
         header = ws.row_values(1)
         if header != QC_REPORT_COLUMNS:
-            ws.update("A1", [QC_REPORT_COLUMNS])
+            ws.update("A1", [_pad_header_for_update(header)])
         return None
     except Exception as e:
         return _describe_gspread_error(e)
@@ -206,7 +217,9 @@ def _sync_header(ws) -> str:
 def force_update_sheet_structure() -> tuple:
     """Paksa perbarui struktur kolom Google Sheets sekarang juga (dipanggil
     dari tombol '🔄 Perbarui Struktur Google Sheets' di UI) — berguna kalau
-    sheet dibuat manual atau dari versi aplikasi lama dengan kolom berbeda.
+    sheet dibuat manual atau dari versi aplikasi lama dengan kolom berbeda
+    (termasuk membersihkan kolom lama seperti 'link_foto' yang sudah tidak
+    dipakai lagi).
     Mengembalikan (sukses: bool, pesan: str)."""
     client, sheet_id, conn_error = _get_client()
     if client is None:
@@ -227,9 +240,17 @@ def force_update_sheet_structure() -> tuple:
         header = ws.row_values(1)
         if header == QC_REPORT_COLUMNS:
             return True, "Struktur kolom sudah sesuai skema terbaru, tidak ada yang diubah."
-        ws.update("A1", [QC_REPORT_COLUMNS])
-        return True, (f"Header baris 1 diperbarui.\nSebelum: {header}\nSesudah: {QC_REPORT_COLUMNS}\n"
-                       f"(baris data di bawahnya TIDAK diubah/dihapus)")
+        padded = _pad_header_for_update(header)
+        ws.update("A1", [padded])
+        note = ""
+        if len(header) > len(QC_REPORT_COLUMNS):
+            extra_cols = header[len(QC_REPORT_COLUMNS):]
+            note = (f"\nKolom lama yang sudah tidak dipakai ({', '.join(c for c in extra_cols if c)}) "
+                     f"judulnya sudah dikosongkan. Kalau mau, hapus kolomnya juga secara manual "
+                     f"(klik kanan header kolom -> 'Delete column') supaya sheet lebih rapi — "
+                     f"data yang sudah ada TIDAK dihapus otomatis demi keamanan.")
+        return True, (f"Header baris 1 diperbarui.\nSebelum: {header}\nSesudah: {QC_REPORT_COLUMNS}"
+                       f"{note}")
     except Exception as e:
         return False, _describe_gspread_error(e)
 
@@ -438,9 +459,14 @@ def upload_photo_to_drive(image_bytes: bytes, filename: str):
 
 def append_qc_report(record: dict, image_bytes: bytes = None) -> tuple:
     """Tambahkan satu baris hasil QC ke Google Sheets. Kalau image_bytes
-    diberikan, foto diupload dulu ke Google Drive lalu ditampilkan langsung
-    sebagai gambar seragam di kolom 'foto' (formula IMAGE()) DAN link klik
-    langsung untuk buka foto resolusi penuh di kolom 'link_foto'.
+    diberikan, foto diupload dulu ke Google Drive, lalu kolom 'foto' diisi
+    LINK KLIK LANGSUNG (formula HYPERLINK()) ke foto tsb di Drive.
+
+    Sengaja TIDAK pakai formula IMAGE() lagi: IMAGE() perlu Google
+    men-fetch & me-render gambarnya di server Sheets, dan itu sering gagal
+    (muncul '#ERROR!' di cell) karena kebijakan Google yang berubah-ubah
+    soal hotlink dari Drive. HYPERLINK() jauh lebih andal — cuma teks biasa
+    yang bisa diklik, tidak pernah gagal 'fetch gambar'.
 
     Mengembalikan (sukses: bool, foto_view_url: str atau None, error: str atau None).
     'error' diisi kalau ada bagian yang gagal (mis. upload foto gagal, atau
@@ -450,24 +476,19 @@ def append_qc_report(record: dict, image_bytes: bytes = None) -> tuple:
     if ws is None:
         return False, None, ws_error or "Google Sheets belum terhubung."
 
-    embed_url = None
     view_url = None
     foto_error = None
     foto_cell_value = ""
-    link_cell_value = ""
     if image_bytes:
         std_bytes = standardize_photo_for_sheets(image_bytes)
         filename = f"{record.get('nomor_seri_barang', 'foto')}_{uuid.uuid4().hex[:8]}.jpg"
-        embed_url, view_url, foto_error = upload_photo_to_drive(std_bytes, filename)
-        if embed_url:
-            foto_cell_value = f'=IMAGE("{embed_url}",4,{SHEET_IMAGE_HEIGHT},{SHEET_IMAGE_WIDTH})'
+        _embed_url_unused, view_url, foto_error = upload_photo_to_drive(std_bytes, filename)
         if view_url:
-            link_cell_value = f'=HYPERLINK("{view_url}","Buka Foto")'
+            foto_cell_value = f'=HYPERLINK("{view_url}","Lihat Foto")'
 
     try:
-        row = [record.get(col, "") for col in QC_REPORT_COLUMNS if col not in ("foto", "link_foto")]
+        row = [record.get(col, "") for col in QC_REPORT_COLUMNS if col != "foto"]
         row.append(foto_cell_value)
-        row.append(link_cell_value)
         ws.append_row(row, value_input_option="USER_ENTERED")
         return True, view_url, foto_error
     except Exception as e:
@@ -485,7 +506,7 @@ def test_drive_upload() -> tuple:
         img.save(buf, format="JPEG", quality=80)
         embed_url, view_url, error = upload_photo_to_drive(buf.getvalue(), f"tes_koneksi_{uuid.uuid4().hex[:6]}.jpg")
         if view_url:
-            return True, f"Berhasil upload.\nLink lihat foto: {view_url}\nLink embed (IMAGE()): {embed_url}"
+            return True, f"Berhasil upload. Link foto: {view_url}"
         return False, error or "Gagal upload tanpa keterangan error."
     except Exception as e:
         return False, f"Gagal menjalankan tes: {e}"
