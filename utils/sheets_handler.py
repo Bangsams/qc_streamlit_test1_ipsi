@@ -460,13 +460,16 @@ def upload_photo_to_drive(image_bytes: bytes, filename: str):
 def append_qc_report(record: dict, image_bytes: bytes = None) -> tuple:
     """Tambahkan satu baris hasil QC ke Google Sheets. Kalau image_bytes
     diberikan, foto diupload dulu ke Google Drive, lalu kolom 'foto' diisi
-    LINK KLIK LANGSUNG (formula HYPERLINK()) ke foto tsb di Drive.
+    URL POLOS (bukan formula) ke foto tsb di Drive — Google Sheets otomatis
+    mengubah teks URL polos jadi link biru yang bisa diklik, TANPA perlu
+    formula HYPERLINK()/IMAGE() sama sekali.
 
-    Sengaja TIDAK pakai formula IMAGE() lagi: IMAGE() perlu Google
-    men-fetch & me-render gambarnya di server Sheets, dan itu sering gagal
-    (muncul '#ERROR!' di cell) karena kebijakan Google yang berubah-ubah
-    soal hotlink dari Drive. HYPERLINK() jauh lebih andal — cuma teks biasa
-    yang bisa diklik, tidak pernah gagal 'fetch gambar'.
+    Kenapa bukan formula HYPERLINK()/IMAGE() lagi: keduanya PERNAH dicoba,
+    dan dua-duanya bisa gagal dengan '#ERROR!' / 'Error mengurai formula'
+    kalau bahasa/locale Spreadsheet-nya di-set ke Indonesia (atau locale lain
+    yang pakai titik koma ';' sebagai pemisah argumen formula, bukan koma
+    ','). Menulis URL polos sepenuhnya menghindari masalah ini — tidak ada
+    formula yang diparse sama sekali, jadi tidak mungkin error separator/locale.
 
     Mengembalikan (sukses: bool, foto_view_url: str atau None, error: str atau None).
     'error' diisi kalau ada bagian yang gagal (mis. upload foto gagal, atau
@@ -484,7 +487,7 @@ def append_qc_report(record: dict, image_bytes: bytes = None) -> tuple:
         filename = f"{record.get('nomor_seri_barang', 'foto')}_{uuid.uuid4().hex[:8]}.jpg"
         _embed_url_unused, view_url, foto_error = upload_photo_to_drive(std_bytes, filename)
         if view_url:
-            foto_cell_value = f'=HYPERLINK("{view_url}","Lihat Foto")'
+            foto_cell_value = view_url  # URL polos, BUKAN formula
 
     try:
         row = [record.get(col, "") for col in QC_REPORT_COLUMNS if col != "foto"]
