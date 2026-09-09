@@ -492,7 +492,19 @@ def append_qc_report(record: dict, image_bytes: bytes = None) -> tuple:
     try:
         row = [record.get(col, "") for col in QC_REPORT_COLUMNS if col != "foto"]
         row.append(foto_cell_value)
-        ws.append_row(row, value_input_option="USER_ENTERED")
+
+        # SENGAJA TIDAK pakai ws.append_row() biasa: fungsi itu mengandalkan
+        # deteksi otomatis "tabel terakhir" dari Google Sheets API, yang bisa
+        # SALAH menebak baris berikutnya kalau sheet-nya sudah dikonversi jadi
+        # "Table" bawaan Google Sheets, atau ada sel error/nyasar di
+        # tengah-tengah data (baris sebelumnya jadi TERTIMPA, bukan
+        # ditambahkan sebagai baris baru — persis masalah yang dilaporkan).
+        # Sebagai gantinya, hitung SENDIRI nomor baris kosong berikutnya
+        # (jumlah baris terisi + 1) dan tulis eksplisit ke baris itu —
+        # jadi tidak pernah salah tebak baris.
+        existing_values = ws.get_all_values()
+        next_row_number = len(existing_values) + 1
+        ws.update(f"A{next_row_number}", [row], value_input_option="USER_ENTERED")
         return True, view_url, foto_error
     except Exception as e:
         return False, view_url, f"Gagal menulis baris ke Sheets: {_describe_gspread_error(e)}"
