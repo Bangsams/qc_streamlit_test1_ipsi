@@ -21,6 +21,7 @@ PHOTOS_DIR = os.path.join(DATA_DIR, "photos")
 WELD_PROCESS_PATH = os.path.join(DATA_DIR, "weld_process_data.csv")
 UT_DATA_PATH = os.path.join(DATA_DIR, "ut_inspection_data.csv")
 MT_DATA_PATH = os.path.join(DATA_DIR, "mt_inspection_data.csv")
+PT_DATA_PATH = os.path.join(DATA_DIR, "pt_inspection_data.csv")
 
 # Parameter proses las + material + joint + lingkungan (root cause / fitur prediksi)
 WELD_PROCESS_COLUMNS = [
@@ -42,6 +43,20 @@ MT_COLUMNS = [
     "tanggal", "batch_id", "operator_mt", "jenis_magnetisasi", "arus_magnetisasi_A",
     "arah_medan", "jenis_partikel", "lifting_power_kg",
     "indikasi_ditemukan", "panjang_indikasi_mm", "mt_hasil", "tanggal_kalibrasi_mt",
+]
+
+# Data hasil Liquid Penetrant Testing / PT (deteksi cacat permukaan terbuka,
+# khususnya pada material non-ferromagnetik yang tidak bisa dites MT —
+# stainless steel austenitik, aluminium, dll). Parameter mengikuti acuan
+# ASME Section V Article 6, ASTM E165, dan ISO 3452 untuk QC manufaktur baja.
+PT_COLUMNS = [
+    "tanggal", "batch_id", "operator_pt", "joint_type_pt",
+    "jenis_penetrant", "metode_pembersihan", "jenis_developer",
+    "nomor_batch_consumable", "suhu_permukaan_C",
+    "waktu_dwell_penetrant_menit", "waktu_dwell_developer_menit",
+    "metode_pencahayaan", "intensitas_cahaya_terukur", "satuan_intensitas",
+    "indikasi_ditemukan", "panjang_indikasi_mm", "klasifikasi_indikasi",
+    "pt_hasil", "tanggal_kalibrasi_pt",
 ]
 
 
@@ -87,10 +102,27 @@ def save_mt_record(record: dict):
     return df
 
 
+def load_pt_data() -> pd.DataFrame:
+    _ensure_file(PT_DATA_PATH, PT_COLUMNS)
+    return pd.read_csv(PT_DATA_PATH)
+
+
+def save_pt_record(record: dict):
+    df = load_pt_data()
+    df = pd.concat([df, pd.DataFrame([record])], ignore_index=True)
+    df.to_csv(PT_DATA_PATH, index=False)
+    return df
+
+
 def load_combined_data() -> pd.DataFrame:
     """Gabungkan data proses las + hasil UT + hasil MT per batch_id.
-    Hasil akhir (final_hasil) = Reject jika UT ATAU MT reject.
-    Turunan tambahan: umur kalibrasi alat (hari) sejak tanggal kalibrasi terakhir."""
+    Hasil akhir (final_hasil) = Reject jika UT ATAU MT ATAU PT reject.
+    Turunan tambahan: umur kalibrasi alat (hari) sejak tanggal kalibrasi terakhir.
+
+    PT (Liquid Penetrant Testing) digabung dengan LEFT JOIN (bukan inner join
+    seperti UT/MT): PT baru mulai dicatat sekarang, jadi batch-batch LAMA yang
+    belum punya data PT TETAP MUNCUL di hasil gabungan ini (kolom PT-nya
+    kosong/NaN untuk batch lama itu) — tidak menghilangkan data historis."""
     weld = load_weld_process_data()
     ut = load_ut_data()[[
         "batch_id", "ut_hasil", "indication_amplitude_pct", "defect_depth_mm",
@@ -99,21 +131,34 @@ def load_combined_data() -> pd.DataFrame:
     mt = load_mt_data()[[
         "batch_id", "mt_hasil", "arus_magnetisasi_A", "panjang_indikasi_mm", "tanggal_kalibrasi_mt",
     ]]
+    pt = load_pt_data()[[
+        "batch_id", "pt_hasil", "klasifikasi_indikasi", "panjang_indikasi_mm", "tanggal_kalibrasi_pt",
+    ]].rename(columns={
+        "panjang_indikasi_mm": "panjang_indikasi_pt_mm",  # hindari nama kolom sama dgn punya MT
+    })
 
     df = weld.merge(ut, on="batch_id", how="inner").merge(mt, on="batch_id", how="inner")
-    df["final_hasil"] = df.apply(
-        lambda r: "Reject" if (r["ut_hasil"] == "Reject" or r["mt_hasil"] == "Reject") else "Accept",
-        axis=1,
-    )
+    df = df.merge(pt, on="batch_id", how="left")
+
+    def _hitung_final(r):
+        hasil_semua = [r.get("ut_hasil"), r.get("mt_hasil")]
+        pt_hasil = r.get("pt_hasil")
+        if isinstance(pt_hasil, str) and pt_hasil:  # PT opsional -> hanya ikut dinilai kalau ada datanya
+            hasil_semua.append(pt_hasil)
+        return "Reject" if "Reject" in hasil_semua else "Accept"
+
+    df["final_hasil"] = df.apply(_hitung_final, axis=1)
 
     # Hitung umur kalibrasi alat (hari) pada tanggal inspeksi — proxy risiko drift alat
     try:
         tgl = pd.to_datetime(df["tanggal"])
         df["umur_kalibrasi_ut_hari"] = (tgl - pd.to_datetime(df["tanggal_kalibrasi_ut"])).dt.days
         df["umur_kalibrasi_mt_hari"] = (tgl - pd.to_datetime(df["tanggal_kalibrasi_mt"])).dt.days
+        df["umur_kalibrasi_pt_hari"] = (tgl - pd.to_datetime(df["tanggal_kalibrasi_pt"])).dt.days
     except Exception:
         df["umur_kalibrasi_ut_hari"] = 0
         df["umur_kalibrasi_mt_hari"] = 0
+        df["umur_kalibrasi_pt_hari"] = 0
 
     return df
 

@@ -47,11 +47,59 @@ UT_PERSONNEL_MIN_LEVEL = "UT Level II - Manual Contact Testing Technique"
 MT_EQUIPMENT_OPTIONS = ["AC Yoke", "DC Yoke", "Prod", "Coil"]
 UT_EQUIPMENT_OPTIONS = ["GE USM 35XDAC", "GE USM 36", "GE USM Go", "GE USM 100", "Sonatest WAVE"]
 
+# ---------------------------------------------------------------------------
+# Ambang batas acuan Liquid Penetrant Testing / PT (ASME Section V Article 6,
+# ASTM E165 "Standard Practice for Liquid Penetrant Testing", dan ISO 3452
+# series). Nilai di bawah adalah AMBANG UMUM/MINIMUM yang paling sering
+# dipakai industri manufaktur baja — tabel ASME V T-672 punya angka spesifik
+# per jenis material/cacat, jadi tetap CEK prosedur/WPS internal PT IHI untuk
+# kasus khusus (mis. casting kompleks butuh dwell time lebih lama).
+# ---------------------------------------------------------------------------
+PT_MIN_DWELL_TIME_PENETRANT_MIN = 10    # Waktu tinggal (dwell) penetrant minimum, umum utk weld/casting
+PT_MIN_DWELL_TIME_DEVELOPER_MIN = 10    # Waktu tinggal developer minimum sebelum boleh diinspeksi
+PT_MIN_SURFACE_TEMP_C = 5.0             # 40°F — batas bawah suhu permukaan standard technique (ASME V T-652)
+PT_MAX_SURFACE_TEMP_C = 52.0            # 125°F — batas atas suhu permukaan standard technique
+PT_MIN_UV_INTENSITY_UWCM2 = 1000        # Intensitas UV-A minimum di permukaan utk fluorescent (ASTM E165)
+PT_MAX_AMBIENT_LIGHT_FOR_FLUORESCENT_LUX = 20   # Cahaya tampak maksimum saat inspeksi fluorescent (harus gelap)
+PT_MIN_VISIBLE_LIGHT_INTENSITY_LUX = 1000       # Intensitas cahaya tampak minimum utk visible dye penetrant
+PT_PENETRANT_TYPE_OPTIONS = ["Visible Dye (Merah)", "Fluorescent"]
+PT_CLEANING_METHOD_OPTIONS = ["Water Washable", "Post-Emulsifiable Lipophilic", "Post-Emulsifiable Hydrophilic", "Solvent Removable"]
+PT_DEVELOPER_TYPE_OPTIONS = ["Dry Powder", "Wet Developer - Aqueous", "Wet Developer - Non-Aqueous (Solvent-Based)"]
+PT_LIGHTING_METHOD_OPTIONS = ["UV-A (Black Light) - untuk Fluorescent", "Cahaya Putih (White Light) - untuk Visible Dye"]
+PT_JOINT_TYPE_OPTIONS = ["Butt Joint", "Fillet Joint", "Tee Joint", "Corner Joint", "Lap Joint"]
+
 
 def check_mt_lifting_power(lifting_power_kg: float):
     """Cek apakah lifting power yoke memenuhi syarat minimum AWS D1.1 (4.5 kg)."""
     ok = lifting_power_kg >= MT_MIN_LIFTING_POWER_KG
     return ok, MT_MIN_LIFTING_POWER_KG
+
+
+def check_pt_dwell_time(dwell_penetrant_min: float, dwell_developer_min: float):
+    """Cek apakah waktu tinggal (dwell time) penetrant & developer memenuhi
+    minimum acuan ASME V / ASTM E165. Mengembalikan (ok_penetrant, ok_developer,
+    min_penetrant, min_developer)."""
+    ok_penetrant = dwell_penetrant_min >= PT_MIN_DWELL_TIME_PENETRANT_MIN
+    ok_developer = dwell_developer_min >= PT_MIN_DWELL_TIME_DEVELOPER_MIN
+    return ok_penetrant, ok_developer, PT_MIN_DWELL_TIME_PENETRANT_MIN, PT_MIN_DWELL_TIME_DEVELOPER_MIN
+
+
+def check_pt_surface_temp(temp_c: float):
+    """Cek apakah suhu permukaan saat tes PT dalam rentang standard technique
+    ASME V (5°C - 52°C / 40°F - 125°F). Di luar rentang ini butuh teknik
+    khusus (non-standard technique) yang harus dikualifikasi terpisah."""
+    ok = PT_MIN_SURFACE_TEMP_C <= temp_c <= PT_MAX_SURFACE_TEMP_C
+    return ok, PT_MIN_SURFACE_TEMP_C, PT_MAX_SURFACE_TEMP_C
+
+
+def check_pt_light_intensity(jenis_penetrant: str, intensitas: float):
+    """Cek apakah intensitas cahaya pemeriksaan memenuhi minimum acuan,
+    tergantung jenis penetrant-nya (Fluorescent butuh UV-A min 1000 µW/cm²,
+    Visible Dye butuh cahaya putih min 1000 lux). Mengembalikan
+    (ok, min_required, satuan)."""
+    if jenis_penetrant == "Fluorescent":
+        return intensitas >= PT_MIN_UV_INTENSITY_UWCM2, PT_MIN_UV_INTENSITY_UWCM2, "µW/cm²"
+    return intensitas >= PT_MIN_VISIBLE_LIGHT_INTENSITY_LUX, PT_MIN_VISIBLE_LIGHT_INTENSITY_LUX, "lux"
 
 
 def get_spc_constants(n: int):

@@ -20,7 +20,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.theme import inject_background
 from utils.data_handler import save_qc_report, save_photo_locally, load_qc_report_log, now_wib
-from utils.qc_utils import check_mt_lifting_power, MT_MIN_LIFTING_POWER_KG
+from utils.qc_utils import check_mt_lifting_power, MT_MIN_LIFTING_POWER_KG, check_pt_light_intensity, PT_PENETRANT_TYPE_OPTIONS
 from utils.config import get_config, set_config, is_sheets_configured, is_drive_bridge_configured
 from utils import sheets_handler
 
@@ -157,11 +157,61 @@ with col_foto:
 
     foto = None
     if sumber_foto == "📷 Ambil Foto Baru (Kamera)":
-        foto = st.camera_input("Ambil foto penandaan hasil QC (seperti contoh: UT.Acc, MT.Repair, dll)")
+        # SENGAJA TIDAK pakai st.camera_input(): widget itu buka kamera lewat
+        # stream browser (getUserMedia) TANPA tombol ganti kamera depan/
+        # belakang sama sekali — keterbatasan bawaan Streamlit yang sudah
+        # lama dikeluhkan (khususnya Android, kadang malah defaultnya ke
+        # kamera depan/selfie, tidak cocok untuk foto hasil QC).
+        #
+        # Sebagai gantinya: pakai st.file_uploader biasa, lalu suntik atribut
+        # HTML `capture="environment"` ke input file-nya lewat JS kecil. Ini
+        # membuat browser mobile membuka APLIKASI KAMERA ASLI bawaan HP
+        # (bukan stream custom Streamlit) — dan aplikasi kamera asli itu
+        # SUDAH PASTI punya tombol switch depan/belakang sendiri dari OS,
+        # jadi masalahnya teratasi tanpa perlu komponen custom yang rumit.
+        # Di desktop, atribut ini otomatis diabaikan browser (tidak ada
+        # efek/regresi apapun, tetap file picker biasa).
+        foto = st.file_uploader(
+            "Ambil foto penandaan hasil QC (seperti contoh: UT.Acc, MT.Repair, dll) — "
+            "di HP akan langsung membuka aplikasi kamera",
+            type=["jpg", "jpeg", "png"],
+            key="foto_kamera_uploader",
+        )
+        st.caption("📱 Di HP: tombol di atas langsung membuka kamera. Kalau HP Anda terbuka di "
+                   "kamera depan, pakai tombol ganti kamera BAWAAN APLIKASI KAMERA HP Anda "
+                   "(bukan tombol di Streamlit) untuk pindah ke kamera belakang.")
+        st.components.v1.html(
+            """
+            <script>
+            (function() {
+                function forceBackCamera() {
+                    try {
+                        var doc = window.parent.document;
+                        var inputs = doc.querySelectorAll('input[type="file"]');
+                        inputs.forEach(function(inp) {
+                            inp.setAttribute('capture', 'environment');
+                        });
+                    } catch (e) { /* diam-diam gagal, tidak mengganggu app */ }
+                }
+                // DOM widget file_uploader mungkin belum ada saat script ini
+                // pertama jalan (render async Streamlit) -> coba beberapa kali.
+                forceBackCamera();
+                var tries = 0;
+                var iv = setInterval(function() {
+                    forceBackCamera();
+                    tries++;
+                    if (tries > 10) clearInterval(iv);
+                }, 300);
+            })();
+            </script>
+            """,
+            height=0,
+        )
     else:
         foto = st.file_uploader(
             "Pilih foto dari galeri/penyimpanan HP atau komputer",
             type=["jpg", "jpeg", "png"],
+            key="foto_galeri_uploader",
         )
 
     if foto is not None:
@@ -173,7 +223,7 @@ with col_form:
         c1, c2 = st.columns(2)
         with c1:
             nomor_seri = st.text_input("Nomor Seri Barang / Batch", placeholder="B081")
-            jenis_ndt = st.selectbox("Jenis NDT", ["UT", "MT"])
+            jenis_ndt = st.selectbox("Jenis NDT", ["UT", "MT", "PT"])
             wilayah_face = st.selectbox("Wilayah Pemeriksaan (Face)", ["Face A", "Face B", "Face C"])
         with c2:
             posisi_x = st.number_input("Posisi X-Line (mm dari titik referensi)", min_value=0.0, value=0.0, step=1.0,
@@ -187,6 +237,19 @@ with col_form:
             if not ok:
                 st.error(f"⚠️ Lifting power {lifting_check} kg di BAWAH syarat minimum AWS D1.1 ({min_req} kg)! "
                          "Verifikasi ulang yoke sebelum melanjutkan inspeksi.")
+        elif jenis_ndt == "PT":
+            pc1, pc2 = st.columns(2)
+            with pc1:
+                jenis_penetrant_qc = st.selectbox("Jenis Penetrant", PT_PENETRANT_TYPE_OPTIONS, key="pt_jenis_qc")
+            with pc2:
+                satuan_qc = "µW/cm²" if jenis_penetrant_qc == "Fluorescent" else "lux"
+                intensitas_qc = st.number_input(f"Intensitas Cahaya Terukur ({satuan_qc})", min_value=0.0,
+                                                 value=1200.0 if jenis_penetrant_qc == "Fluorescent" else 1100.0,
+                                                 step=10.0, key="pt_intensitas_qc")
+            ok_light, min_light, satuan_light = check_pt_light_intensity(jenis_penetrant_qc, intensitas_qc)
+            if not ok_light:
+                st.error(f"⚠️ Intensitas cahaya {intensitas_qc} {satuan_light} di BAWAH syarat minimum acuan "
+                         f"ASTM E165 ({min_light} {satuan_light})! Periksa ulang sumber cahaya sebelum melanjutkan inspeksi.")
 
         catatan = st.text_area("Catatan Tambahan", placeholder="Contoh: indikasi linear 6mm, sudah digerinda halus")
 
