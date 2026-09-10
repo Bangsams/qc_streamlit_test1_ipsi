@@ -19,7 +19,7 @@ import sys, os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.theme import inject_background
-from utils.data_handler import save_qc_report, save_photo_locally, load_qc_report_log, now_wib
+from utils.data_handler import save_qc_report, save_photo_locally, load_qc_report_log, now_wib, fix_image_orientation
 from utils.qc_utils import check_mt_lifting_power, MT_MIN_LIFTING_POWER_KG, check_pt_light_intensity, PT_PENETRANT_TYPE_OPTIONS
 from utils.config import get_config, set_config, is_sheets_configured, is_drive_bridge_configured
 from utils import sheets_handler
@@ -193,8 +193,6 @@ with col_foto:
                         });
                     } catch (e) { /* diam-diam gagal, tidak mengganggu app */ }
                 }
-                // DOM widget file_uploader mungkin belum ada saat script ini
-                // pertama jalan (render async Streamlit) -> coba beberapa kali.
                 forceBackCamera();
                 var tries = 0;
                 var iv = setInterval(function() {
@@ -214,46 +212,65 @@ with col_foto:
             key="foto_galeri_uploader",
         )
 
+    # --- Perbaiki orientasi foto (anti-miring) SEKALI di sini, dipakai
+    # konsisten untuk preview DAN untuk disimpan/diupload nanti — supaya
+    # yang ditampilkan ke user sama persis dengan yang tersimpan. ---
+    image_bytes = None
     if foto is not None:
-        st.image(foto, caption="Preview foto yang akan disimpan", use_container_width=True)
+        image_bytes = fix_image_orientation(foto.getvalue())
+        st.image(image_bytes, caption="Preview foto yang akan disimpan", use_container_width=True)
 
 with col_form:
     st.subheader("2️⃣ Isi Data Hasil QC")
-    with st.form("qc_report_form", clear_on_submit=False):
-        c1, c2 = st.columns(2)
-        with c1:
-            nomor_seri = st.text_input("Nomor Seri Barang / Batch", placeholder="B081")
-            jenis_ndt = st.selectbox("Jenis NDT", ["UT", "MT", "PT"])
-            wilayah_face = st.selectbox("Wilayah Pemeriksaan (Face)", ["Face A", "Face B", "Face C"])
-        with c2:
-            posisi_x = st.number_input("Posisi X-Line (mm dari titik referensi)", min_value=0.0, value=0.0, step=1.0,
-                                        help="Sesuai konvensi penandaan: jarak sepanjang sumbu las, mis. L=6060mm")
-            operator_qc = st.text_input("Nama/ID Operator QC", placeholder="QC-13")
-            hasil = st.selectbox("Hasil", ["Accept", "Perlu Gerinda (Repair)", "Reject"])
 
-        if jenis_ndt == "MT":
-            lifting_check = st.number_input("Lifting Power Yoke Saat Ini (kg)", min_value=0.0, value=5.0, step=0.1)
-            ok, min_req = check_mt_lifting_power(lifting_check)
-            if not ok:
-                st.error(f"⚠️ Lifting power {lifting_check} kg di BAWAH syarat minimum AWS D1.1 ({min_req} kg)! "
-                         "Verifikasi ulang yoke sebelum melanjutkan inspeksi.")
-        elif jenis_ndt == "PT":
-            pc1, pc2 = st.columns(2)
-            with pc1:
-                jenis_penetrant_qc = st.selectbox("Jenis Penetrant", PT_PENETRANT_TYPE_OPTIONS, key="pt_jenis_qc")
-            with pc2:
-                satuan_qc = "µW/cm²" if jenis_penetrant_qc == "Fluorescent" else "lux"
-                intensitas_qc = st.number_input(f"Intensitas Cahaya Terukur ({satuan_qc})", min_value=0.0,
-                                                 value=1200.0 if jenis_penetrant_qc == "Fluorescent" else 1100.0,
-                                                 step=10.0, key="pt_intensitas_qc")
-            ok_light, min_light, satuan_light = check_pt_light_intensity(jenis_penetrant_qc, intensitas_qc)
-            if not ok_light:
-                st.error(f"⚠️ Intensitas cahaya {intensitas_qc} {satuan_light} di BAWAH syarat minimum acuan "
-                         f"ASTM E165 ({min_light} {satuan_light})! Periksa ulang sumber cahaya sebelum melanjutkan inspeksi.")
+    # PENTING: bagian ini SENGAJA TIDAK di dalam st.form(). Streamlit form
+    # membatasi/menahan (batch) semua interaksi widget di dalamnya sampai
+    # tombol submit ditekan — jadi kalau "Jenis NDT" ada di dalam form,
+    # field tambahan yang kondisional (mis. Jenis Penetrant & Intensitas
+    # Cahaya utk PT, Lifting Power utk MT) TIDAK akan pernah muncul secara
+    # interaktif saat dropdown diganti (baru muncul SETELAH submit, sudah
+    # terlambat). Makanya field² PT kemarin "hilang". Dengan widget biasa
+    # (bukan st.form), tiap perubahan dropdown langsung me-render ulang
+    # field yang relevan.
+    c1, c2 = st.columns(2)
+    with c1:
+        nomor_seri = st.text_input("Nomor Seri Barang / Batch", placeholder="B081")
+        jenis_ndt = st.selectbox("Jenis NDT", ["UT", "MT", "PT"])
+        wilayah_face = st.selectbox("Wilayah Pemeriksaan (Face)", ["Face A", "Face B", "Face C"])
+    with c2:
+        posisi_x = st.number_input("Posisi X-Line (mm dari titik referensi)", min_value=0.0, value=0.0, step=1.0,
+                                    help="Sesuai konvensi penandaan: jarak sepanjang sumbu las, mis. L=6060mm")
+        operator_qc = st.text_input("Nama/ID Operator QC", placeholder="QC-13")
+        hasil = st.selectbox("Hasil", ["Accept", "Perlu Gerinda (Repair)", "Reject"])
 
-        catatan = st.text_area("Catatan Tambahan", placeholder="Contoh: indikasi linear 6mm, sudah digerinda halus")
+    lifting_check = None
+    jenis_penetrant_qc = None
+    intensitas_qc = None
+    satuan_qc = None
 
-        submitted = st.form_submit_button("💾 Simpan Laporan (Foto + Data)", use_container_width=True)
+    if jenis_ndt == "MT":
+        lifting_check = st.number_input("Lifting Power Yoke Saat Ini (kg)", min_value=0.0, value=5.0, step=0.1)
+        ok, min_req = check_mt_lifting_power(lifting_check)
+        if not ok:
+            st.error(f"⚠️ Lifting power {lifting_check} kg di BAWAH syarat minimum AWS D1.1 ({min_req} kg)! "
+                     "Verifikasi ulang yoke sebelum melanjutkan inspeksi.")
+    elif jenis_ndt == "PT":
+        pc1, pc2 = st.columns(2)
+        with pc1:
+            jenis_penetrant_qc = st.selectbox("Jenis Penetrant", PT_PENETRANT_TYPE_OPTIONS, key="pt_jenis_qc")
+        with pc2:
+            satuan_qc = "µW/cm²" if jenis_penetrant_qc == "Fluorescent" else "lux"
+            intensitas_qc = st.number_input(f"Intensitas Cahaya Terukur ({satuan_qc})", min_value=0.0,
+                                             value=1200.0 if jenis_penetrant_qc == "Fluorescent" else 1100.0,
+                                             step=10.0, key="pt_intensitas_qc")
+        ok_light, min_light, satuan_light = check_pt_light_intensity(jenis_penetrant_qc, intensitas_qc)
+        if not ok_light:
+            st.error(f"⚠️ Intensitas cahaya {intensitas_qc} {satuan_light} di BAWAH syarat minimum acuan "
+                     f"ASTM E165 ({min_light} {satuan_light})! Periksa ulang sumber cahaya sebelum melanjutkan inspeksi.")
+
+    catatan = st.text_area("Catatan Tambahan", placeholder="Contoh: indikasi linear 6mm, sudah digerinda halus")
+
+    submitted = st.button("💾 Simpan Laporan (Foto + Data)", use_container_width=True)
 
     if submitted:
         if foto is None:
@@ -262,7 +279,6 @@ with col_form:
             st.error("Nomor Seri Barang dan Operator QC wajib diisi.")
         else:
             now = now_wib()  # WIB (Asia/Jakarta), bukan waktu server UTC
-            image_bytes = foto.getvalue()
             foto_filename = save_photo_locally(image_bytes, nomor_seri)
 
             record = {
@@ -272,6 +288,13 @@ with col_form:
                 "hasil": hasil, "perlu_gerinda": "Ya" if "Gerinda" in hasil else "Tidak",
                 "operator_qc": operator_qc, "catatan": catatan,
                 "foto_path": foto_filename,
+                # Field spesifik per jenis NDT (kosong "" kalau tidak relevan
+                # dengan jenis yang dipilih — supaya tetap satu skema kolom
+                # yang sama di Google Sheets utk UT/MT/PT).
+                "lifting_power_kg": lifting_check if lifting_check is not None else "",
+                "jenis_penetrant": jenis_penetrant_qc or "",
+                "intensitas_cahaya": intensitas_qc if intensitas_qc is not None else "",
+                "satuan_intensitas": satuan_qc or "",
             }
             tempat_simpan, foto_error = save_qc_report(record, image_bytes=image_bytes)
             st.success(f"✅ Laporan tersimpan ke: {tempat_simpan}.")

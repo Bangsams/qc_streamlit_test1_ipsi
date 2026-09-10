@@ -73,7 +73,8 @@ from .config import get_config, get_service_account_info
 SHEET_TAB_NAME = "hasil_qc_log"
 QC_REPORT_COLUMNS = [
     "tanggal", "waktu", "nomor_seri_barang", "jenis_ndt", "wilayah_pemeriksaan_face",
-    "posisi_x_line_mm", "hasil", "perlu_gerinda", "operator_qc", "catatan", "foto",
+    "posisi_x_line_mm", "hasil", "perlu_gerinda", "operator_qc", "catatan",
+    "lifting_power_kg", "jenis_penetrant", "intensitas_cahaya", "satuan_intensitas", "foto",
 ]
 
 # Ukuran seragam untuk foto yang ditampilkan di dalam cell Google Sheets (piksel)

@@ -204,8 +204,38 @@ QC_REPORT_LOG_PATH = os.path.join(DATA_DIR, "hasil_qc_log.xlsx")
 QC_REPORT_COLUMNS = [
     "tanggal", "waktu", "nomor_seri_barang", "jenis_ndt", "wilayah_pemeriksaan_face",
     "posisi_x_line_mm", "hasil", "perlu_gerinda", "operator_qc", "catatan",
+    "lifting_power_kg", "jenis_penetrant", "intensitas_cahaya", "satuan_intensitas",
     "foto_path", "foto_url",
 ]
+
+
+def fix_image_orientation(image_bytes: bytes) -> bytes:
+    """Perbaiki orientasi foto sesuai metadata EXIF dari kamera HP.
+
+    PENYEBAB FOTO TAMPIL MIRING: foto yang diambil lewat aplikasi kamera
+    native HP (lihat trik `capture="environment"` di halaman Laporan Foto
+    QC) biasanya menyimpan piksel APA ADANYA (mis. tetap 'landscape' secara
+    data mentah) lalu menambahkan tag EXIF 'Orientation' yang memberi tahu
+    software "putar sekian derajat saat ditampilkan". Banyak alur pemrosesan
+    (termasuk upload ke Drive & formula di Google Sheets) TIDAK membaca tag
+    ini, jadi fotonya tampil miring/kesamping.
+
+    Fungsi ini memutar PIKSELNYA SENDIRI secara fisik sesuai tag EXIF
+    tsb (pakai PIL ImageOps.exif_transpose), lalu membuang tag orientasinya
+    (karena sudah tidak relevan lagi) — hasilnya foto JPEG baru yang SELALU
+    tampil tegak di mana saja (preview app, Drive, Sheets, dst), konsisten.
+
+    Aman dipanggil pada foto yang TIDAK punya tag EXIF sama sekali (tidak
+    diubah apa-apa)."""
+    from PIL import Image, ImageOps
+    import io as _io
+    img = Image.open(_io.BytesIO(image_bytes))
+    img = ImageOps.exif_transpose(img)  # None kalau tidak ada EXIF -> dikembalikan apa adanya oleh PIL
+    if img.mode not in ("RGB",):
+        img = img.convert("RGB")
+    buf = _io.BytesIO()
+    img.save(buf, format="JPEG", quality=92)
+    return buf.getvalue()
 
 
 def save_photo_locally(image_bytes: bytes, nomor_seri: str, ext: str = "jpg") -> str:
